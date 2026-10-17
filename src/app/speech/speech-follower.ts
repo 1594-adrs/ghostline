@@ -76,7 +76,7 @@ export const SPEECH_IPC = new InjectionToken<SpeechIpc>('SPEECH_IPC', {
 export class SpeechFollower {
   private readonly store = inject(PrompterStore);
   private readonly ipc = inject(SPEECH_IPC);
-  private readonly buffer = new HeardBuffer();
+  private buffer = new HeardBuffer();
   private unlisten: Promise<() => void> | null = null;
   /** Cursor after our last update; any other value means a hotkey, auto-scroll or reload moved it. */
   private expected: number | null = null;
@@ -88,14 +88,20 @@ export class SpeechFollower {
 
   async start(): Promise<void> {
     if (this.unlisten) return;
+    // Rust numbers utterances from 0 in every session; a buffer from the last session would drop them.
+    this.buffer = new HeardBuffer();
+    this.expected = null;
     const pending = this.ipc.listen('speech', (e) => this.onSpeech(e));
     this.unlisten = pending;
     try {
       await pending;
+      if (this.unlisten !== pending) return; // stop() ran while subscribing
       await this.ipc.invoke('start_listening');
-      this.listening.set(true);
+      // A stop() issued while the mic was opening wins; its stop_listening may have reached Rust first.
+      if (this.unlisten === pending) this.listening.set(true);
+      else await this.ipc.invoke('stop_listening');
     } catch (e) {
-      this.unlisten = null;
+      if (this.unlisten === pending) this.unlisten = null;
       (await pending.catch(() => null))?.();
       throw e;
     }
@@ -107,8 +113,6 @@ export class SpeechFollower {
     this.unlisten = null;
     this.listening.set(false);
     (await unlisten)();
-    this.buffer.clear();
-    this.expected = null;
     this.confidence.set(0);
     await this.ipc.invoke('stop_listening');
   }

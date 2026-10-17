@@ -103,6 +103,28 @@ describe('SpeechFollower', () => {
     expect(ipc.invoke).toHaveBeenLastCalledWith('stop_listening');
   });
 
+  it('a new session accepts utterance numbers starting again at 0', async () => {
+    await follower.start();
+    handler?.(final(0, 'hola a todos'));
+    expect(store.cursor()).toBe(3);
+    await follower.stop();
+    await follower.start();
+    handler?.(partial(0, 'hola a todos bienvenidos'));
+    expect(store.cursor()).toBe(4);
+  });
+
+  it('stop() while the mic is opening leaves it closed and not listening', async () => {
+    let open!: () => void;
+    ipc.invoke.mockImplementationOnce(() => new Promise<void>((r) => (open = r)));
+    const starting = follower.start();
+    await vi.waitFor(() => expect(ipc.invoke).toHaveBeenCalledWith('start_listening'));
+    await follower.stop();
+    open();
+    await starting;
+    expect(follower.listening()).toBe(false);
+    expect(ipc.invoke).toHaveBeenLastCalledWith('stop_listening');
+  });
+
   it('follows cumulative and revised partials without double counting', async () => {
     await follower.start();
     const emit = (e: SpeechEvent) => handler?.(e);
