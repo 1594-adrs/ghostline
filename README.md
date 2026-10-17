@@ -18,7 +18,9 @@
 
 ## Install
 
-Download the installer from [Releases](../../releases). The Spanish voice model (~40 MB) is downloaded the first time you turn on voice follow, and its SHA-256 is checked.
+Download the installer from [Releases](../../releases). The installers are not code-signed yet, so Windows SmartScreen will warn you the first time: choose **More info → Run anyway**.
+
+To use voice follow, install the Spanish voice model (~40 MB) from **Settings → Voice**. Its SHA-256 is checked before it is unpacked.
 
 ## Script format
 
@@ -73,6 +75,8 @@ The defaults use only non-character keys, because on Windows Ctrl+Alt is the sam
 - Capture exclusion depends on the capture API. The standard Windows capture paths respect it, but some tools may still record the overlay. Check it with your own setup before going live.
 - Voice follow is Spanish only for now.
 - Windows only for now.
+- Some Intel graphics drivers use Ctrl+Alt+arrow keys to rotate the screen. If the arrow hotkeys do nothing, turn off those driver hotkeys or rebind Ghostline's in Settings.
+- A hotkey that another app already registered globally can't be recorded in Settings; Windows delivers it to that app.
 
 ## Development
 
