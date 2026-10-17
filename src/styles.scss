@@ -1,0 +1,375 @@
+/*
+ * Ghostline — global tokens and primitives.
+ * Palette "ink & cue light": a translucent ink panel, paper-white type, one amber cue (the prompter
+ * operator's reading marker / tally lamp). Overlay tokens are fixed (always dark); settings tokens follow
+ * the system theme.
+ */
+
+:root {
+  /* type */
+  --gl-font-text: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --gl-font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --gl-font-small: 'Segoe UI Variable Small', 'Segoe UI', system-ui, sans-serif;
+  --gl-font-mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  --gl-size-xs: 12px;
+  --gl-size-sm: 14px;
+  --gl-size-md: 17px;
+  --gl-size-lg: 22px;
+
+  /* spacing — 4px rhythm */
+  --gl-1: 4px;
+  --gl-2: 8px;
+  --gl-3: 12px;
+  --gl-4: 16px;
+  --gl-5: 24px;
+  --gl-6: 32px;
+  --gl-7: 48px;
+
+  /* radii by hierarchy: window > control > chip */
+  --gl-r-window: 18px;
+  --gl-r-control: 8px;
+  --gl-r-chip: 5px;
+
+  /* overlay (always dark) */
+  --gl-ink: 12 17 24; /* #0C1118 as rgb channels for alpha */
+  --gl-paper: #f4f6f8;
+  --gl-paper-read: rgb(244 246 248 / 0.34);
+  --gl-paper-muted: rgb(244 246 248 / 0.62);
+  --gl-cue: #f2b544;
+  --gl-cue-text: #ffd889;
+  --gl-cue-wash: rgb(242 181 68 / 0.2);
+  --gl-live: #ff6b5f;
+
+  /* motion */
+  --gl-ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --gl-scroll-ms: 460ms;
+  --gl-glide-ms: 170ms;
+
+  /* settings (light) */
+  --s-bg: #fbfbfc;
+  --s-raised: #f1f3f5;
+  --s-text: #16202b;
+  --s-muted: #586470;
+  --s-line: #e0e4e9;
+  --s-line-strong: #c3cad2;
+  --s-accent: #9a6400;
+  --s-on-accent: #ffffff;
+  --s-accent-wash: rgb(154 100 0 / 0.1);
+  --s-warn: #8a5300;
+  --s-warn-wash: #fff4dc;
+  --s-danger: #b42318;
+  --s-danger-wash: #fdecea;
+  --s-ok: #1f7a4d;
+  --s-focus: #1f4fd1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --s-bg: #12171e;
+    --s-raised: #1a212b;
+    --s-text: #e8ecf1;
+    --s-muted: #9aa5b2;
+    --s-line: #26303c;
+    --s-line-strong: #3a4654;
+    --s-accent: #f2b544;
+    --s-on-accent: #1a1206;
+    --s-accent-wash: rgb(242 181 68 / 0.12);
+    --s-warn: #f5c56b;
+    --s-warn-wash: rgb(245 197 107 / 0.1);
+    --s-danger: #ff8a80;
+    --s-danger-wash: rgb(255 138 128 / 0.1);
+    --s-ok: #6fd3a0;
+    --s-focus: #8fb2ff;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The overlay window is transparent: nothing may paint the canvas. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  font-family: var(--gl-font-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+.gl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- settings primitives */
+
+.gl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gl-2);
+  min-height: 36px;
+  padding: 0 var(--gl-4);
+  border: 1px solid var(--s-line-strong);
+  border-radius: var(--gl-r-control);
+  background: var(--s-bg);
+  font-size: var(--gl-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms,
+    border-color 120ms;
+
+  &:hover:not(:disabled) {
+    background: var(--s-raised);
+    border-color: var(--s-muted);
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+}
+
+.gl-btn--primary {
+  border-color: var(--s-accent);
+  background: var(--s-accent);
+  color: var(--s-on-accent);
+
+  &:hover:not(:disabled) {
+    border-color: var(--s-accent);
+    background: color-mix(in srgb, var(--s-accent) 86%, var(--s-text));
+  }
+}
+
+.gl-btn--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--s-muted);
+  &:hover:not(:disabled) {
+    color: var(--s-text);
+  }
+}
+
+.gl-btn--icon {
+  width: 36px;
+  padding: 0;
+}
+
+:where(.gl-settings) :focus-visible {
+  outline: 2px solid var(--s-focus);
+  outline-offset: 2px;
+}
+
+.gl-select {
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 var(--gl-6) 0 var(--gl-3);
+  border: 1px solid var(--s-line-strong);
+  border-radius: var(--gl-r-control);
+  background: var(--s-bg)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23808a96' stroke-width='1.6'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E")
+    no-repeat right 12px center;
+  appearance: none;
+  font-size: var(--gl-size-sm);
+  cursor: pointer;
+}
+
+.gl-switch {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 24px;
+  margin: 0;
+  border-radius: 12px;
+  background: var(--s-line-strong);
+  appearance: none;
+  cursor: pointer;
+  transition: background-color 160ms var(--gl-ease);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+    transition: transform 160ms var(--gl-ease);
+  }
+  &:checked {
+    background: var(--s-accent);
+  }
+  &:checked::after {
+    transform: translateX(20px);
+  }
+}
+
+.gl-range {
+  --fill: 50%;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+
+  &::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(
+      to right,
+      var(--s-accent) var(--fill),
+      var(--s-line-strong) var(--fill)
+    );
+  }
+  &::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+    border: 2px solid var(--s-accent);
+    border-radius: 50%;
+    background: var(--s-bg);
+    appearance: none;
+  }
+}
+
+/* element resets inside the settings window */
+.gl-settings fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.gl-settings code {
+  padding: 1px 6px;
+  border-radius: var(--gl-r-chip);
+  background: var(--s-raised);
+  font: var(--gl-size-xs) var(--gl-font-mono);
+}
+
+/* selectable card wrapping a visually hidden radio */
+.gl-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--gl-3);
+  border: 1px solid var(--s-line-strong);
+  border-radius: var(--gl-r-control);
+  cursor: pointer;
+  &:hover {
+    background: var(--s-raised);
+  }
+  &:has(:checked) {
+    --choice-ink: var(--s-accent);
+    border-color: var(--s-accent);
+    background: var(--s-accent-wash);
+    box-shadow: inset 0 0 0 1px var(--s-accent);
+  }
+  &:has(:focus-visible) {
+    outline: 2px solid var(--s-focus);
+    outline-offset: 2px;
+  }
+}
+
+.gl-segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: calc(var(--gl-r-control) + 3px);
+  background: var(--s-raised);
+  label span {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 var(--gl-4);
+    border-radius: var(--gl-r-control);
+    color: var(--s-muted);
+    cursor: pointer;
+  }
+  :checked + span {
+    background: var(--s-bg);
+    color: var(--s-text);
+    font-weight: 600;
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.12),
+      0 0 0 1px var(--s-line);
+  }
+  :focus-visible + span {
+    outline: 2px solid var(--s-focus);
+    outline-offset: 2px;
+  }
+}
+
+.gl-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--gl-3);
+  margin-bottom: var(--gl-4);
+  padding: var(--gl-2) var(--gl-2) var(--gl-2) var(--gl-4);
+  border-radius: var(--gl-r-control);
+  background: var(--s-danger-wash);
+  color: var(--s-danger);
+  p {
+    flex: 1;
+    margin: 0;
+  }
+}
+
+.gl-progress {
+  width: 160px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--s-line);
+  span {
+    display: block;
+    height: 100%;
+    background: var(--s-accent);
+    transform-origin: left;
+    transition: transform 200ms;
+  }
+  &.is-indeterminate span {
+    animation: gl-indeterminate 1.2s var(--gl-ease) infinite;
+  }
+}
+@keyframes gl-indeterminate {
+  from {
+    translate: -100%;
+  }
+  to {
+    translate: 340%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

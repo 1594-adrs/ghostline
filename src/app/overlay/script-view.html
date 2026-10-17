@@ -1,0 +1,38 @@
+<div class="column" #column>
+  <span class="mark" #mark aria-hidden="true"></span>
+  <div class="track" #track>
+    <span class="cue is-off" #cue aria-hidden="true"></span>
+    @for (b of blocks(); track b.id) {
+      @if (b.kind === 'pause') {
+        <div class="blk k-pause" role="separator" [attr.aria-label]="i18n.t('overlay.pause')">
+          <i></i><i></i><i></i>
+        </div>
+      } @else {
+        <p
+          [class]="b.cls"
+          [attr.role]="b.kind === 'heading' ? 'heading' : null"
+          [attr.aria-level]="b.level"
+        >
+          <span class="txt">
+            @for (r of b.runs; track $index) {
+              @if (r.w >= 0) {
+                <span
+                  [class]="r.cls"
+                  [class.is-read]="r.w < store.cursor()"
+                  [class.is-now]="r.w === store.cursor()"
+                  [attr.data-w]="r.w"
+                  >{{ r.text }}</span
+                >
+              } @else {
+                <span [class]="r.cls" [class.is-read]="r.s >= 0 && r.s < store.cursor()">{{
+                  r.text
+                }}</span>
+              }
+            }
+          </span>
+        </p>
+      }
+    }
+    <p class="end" #end>{{ i18n.t('overlay.end') }}</p>
+  </div>
+</div>

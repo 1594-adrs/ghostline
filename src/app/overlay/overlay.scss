@@ -1,0 +1,75 @@
+// Layout per mode. --sv-gutter: side padding; --sv-measure: text column width (in prompter-font units).
+:host {
+  --sv-gutter: 26px;
+  --sv-measure: 100%;
+  --panel-radius: var(--gl-r-window);
+
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+:host([data-mode='strip']) {
+  // Wide but short, right under the webcam: a centred ~60ch column keeps the eyes near the lens.
+  --sv-gutter: 40px;
+  --sv-measure: calc(var(--sv-font) * 30);
+  --panel-radius: 16px;
+}
+
+:host([data-mode='full']) {
+  --sv-gutter: 72px;
+  --sv-measure: calc(var(--sv-font) * 26);
+  --panel-radius: 0px;
+}
+
+.panel {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--panel-radius);
+  background: rgb(var(--gl-ink) / var(--panel-alpha, 0.75));
+  // Hairline edge so the panel holds its shape on a dark desktop.
+  box-shadow: inset 0 0 0 1px rgb(244 246 248 / 0.07);
+}
+
+:host(.is-edit) app-script-view {
+  opacity: 0.22;
+}
+
+app-overlay-hud {
+  width: 100%;
+  max-width: calc(var(--sv-measure) + var(--sv-gutter) * 2);
+  margin-inline: auto;
+}
+
+:host([data-mode='full']) app-overlay-hud {
+  height: 44px;
+}
+
+// ---------------------------------------------------------------- empty state
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: var(--gl-4);
+  max-width: 34rem;
+  margin: auto;
+  padding: var(--gl-5) var(--sv-gutter);
+  color: var(--gl-paper);
+}
+
+.empty-title {
+  margin: 0 0 var(--gl-1);
+  font-family: var(--gl-font-display);
+  font-size: var(--gl-size-md);
+  font-weight: 600;
+}
+
+.empty-body {
+  margin: 0;
+  font-size: var(--gl-size-sm);
+  line-height: 1.45;
+  color: var(--gl-paper-muted);
+}
