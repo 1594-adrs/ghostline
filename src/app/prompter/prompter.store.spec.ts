@@ -33,6 +33,15 @@ describe('PrompterStore', () => {
       expect(store.fontSizePx()).toBe(40);
     });
 
+    it("falls back to the given defaults so one script's meta doesn't leak into the next", () => {
+      const store = storeWith(md('---\nspeed: 200\nfontSize: 40\n---\nUno'));
+
+      store.loadScript(md('Dos'), false, { speedWpm: 140, fontSizePx: 999 });
+
+      expect(store.speedWpm()).toBe(140);
+      expect(store.fontSizePx()).toBe(160);
+    });
+
     it('clamps a low meta speed to 60', () => {
       const store = storeWith(md('---\nspeed: 10\n---\nUno'));
 

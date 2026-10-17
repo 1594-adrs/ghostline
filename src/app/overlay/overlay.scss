@@ -73,3 +73,17 @@ app-overlay-hud {
   line-height: 1.45;
   color: var(--gl-paper-muted);
 }
+
+// ---------------------------------------------------------------- error toast
+
+.toast {
+  position: absolute;
+  inset: auto var(--gl-3) var(--gl-3);
+  margin: 0;
+  padding: var(--gl-2) var(--gl-3);
+  border-radius: var(--gl-r-control);
+  background: rgb(var(--gl-ink) / 0.92);
+  box-shadow: inset 0 0 0 1px var(--gl-live);
+  color: var(--gl-paper);
+  font: var(--gl-size-sm) / 1.35 var(--gl-font-text);
+}

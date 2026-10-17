@@ -19,6 +19,8 @@ import { LogoMark } from './logo-mark';
 import { OverlayHud } from './overlay-hud';
 import { ScriptView } from './script-view';
 
+const ERROR_TOAST_MS = 6000;
+
 /**
  * The prompter window: transparent, always on top, click-through outside edit mode.
  * One component, three layouts keyed by `data-mode` (corner / strip / full).
@@ -53,6 +55,9 @@ import { ScriptView } from './script-view';
         @if (store.editMode()) {
           <app-edit-chrome />
         }
+        @if (settings.lastError(); as error) {
+          <p class="toast" role="alert">{{ error }}</p>
+        }
       </main>
     }
   `,
@@ -65,6 +70,7 @@ export class Overlay {
   readonly confidence = input<number | null>(null);
 
   protected readonly store = inject(PrompterStore);
+  protected readonly settings = inject(SettingsClient);
   protected readonly i18n = inject(I18n);
   protected readonly hasScript = computed(() => this.store.script().blocks.length > 0);
   protected readonly demo: DemoOptions | null;
@@ -78,10 +84,16 @@ export class Overlay {
   );
 
   constructor() {
-    const settings = inject(SettingsClient);
+    const { settings } = this;
     const doc = inject(DOCUMENT);
     // App syncs I18n.language; the document language is this window's job.
     effect(() => (doc.documentElement.lang = settings.settings().language));
+    // The overlay is click-through, so nobody can dismiss the toast: it clears itself.
+    effect((onCleanup) => {
+      if (!settings.lastError()) return;
+      const timer = setTimeout(() => settings.lastError.set(null), ERROR_TOAST_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
     const params = demoParams();
     this.demo = params ? startDemo(params) : null;
   }

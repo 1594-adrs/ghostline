@@ -1,4 +1,12 @@
-import { computed, DestroyRef, effect, inject, Injectable, untracked } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  untracked,
+  type WritableSignal,
+} from '@angular/core';
 import type { HotkeyAction } from '../core/contracts';
 import { invoke, listen } from '../core/ipc';
 import { SettingsClient } from '../core/settings-client';
@@ -51,7 +59,11 @@ export class OverlayController {
 
   private async load(path: string, keepPosition: boolean): Promise<void> {
     try {
-      this.store.loadScript(await invoke('read_script', { path }), keepPosition);
+      const file = await invoke('read_script', { path });
+      this.store.loadScript(file, keepPosition, {
+        speedWpm: this.speedWpm(),
+        fontSizePx: this.fontSizePx(),
+      });
       if (!keepPosition) await invoke('watch_script', { path });
     } catch (e) {
       this.client.lastError.set(String(e));
@@ -76,17 +88,34 @@ export class OverlayController {
       case 'next-section':
         return s.nextSection();
       case 'toggle-visible':
-        s.visible.update((v) => !v);
-        return void invoke('set_visible', { visible: s.visible() });
+        return void this.toggleWindowFlag(s.visible, (visible) =>
+          invoke('set_visible', { visible }),
+        );
       case 'toggle-edit':
-        s.editMode.update((v) => !v);
-        return void invoke('set_edit_mode', { enabled: s.editMode() });
+        return void this.toggleWindowFlag(s.editMode, (enabled) =>
+          invoke('set_edit_mode', { enabled }),
+        );
       case 'toggle-voice':
         return void this.toggleVoice();
       case 'cycle-mode':
         return void this.client.update({ mode: s.cycleMode() });
       case 'toggle-capture':
         return void this.client.update({ captureHidden: !this.client.settings().captureHidden });
+    }
+  }
+
+  /** Flip the signal first so the UI reacts at once; undo it if the window refused. */
+  private async toggleWindowFlag(
+    flag: WritableSignal<boolean>,
+    apply: (value: boolean) => Promise<unknown>,
+  ): Promise<void> {
+    const value = !flag();
+    flag.set(value);
+    try {
+      await apply(value);
+    } catch (e) {
+      flag.set(!value);
+      this.client.lastError.set(String(e));
     }
   }
 
@@ -99,6 +128,8 @@ export class OverlayController {
       // e.g. model not installed or mic blocked: fall back to auto-scroll and tell the user.
       this.store.setFollow('auto');
       this.client.lastError.set(String(e));
+      // The fix (install the model, pick a mic) lives in Settings.
+      if (voice) void invoke('show_settings_window').catch(() => undefined);
     }
   }
 

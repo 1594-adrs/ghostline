@@ -11,6 +11,9 @@ import { parseScript } from '../script/parse-script';
 export const EMPTY_SCRIPT: Script = { meta: {}, blocks: [], words: [], sections: [] };
 export const MIN_WPM = 60;
 export const MAX_WPM = 300;
+/** Same bounds as the Rust settings sanitizer. */
+export const MIN_FONT_PX = 12;
+export const MAX_FONT_PX = 160;
 export const WPM_STEP = 10;
 const MODES: readonly OverlayMode[] = ['corner', 'strip', 'full'];
 
@@ -64,8 +67,16 @@ export class PrompterStore {
     visible: this.visible(),
   }));
 
-  /** `keepPosition` is for hot reload of the same file: the cursor is clamped instead of reset. */
-  loadScript(file: ScriptFile, keepPosition = false): void {
+  /**
+   * `keepPosition` is for hot reload of the same file: the cursor is clamped instead of reset.
+   * `defaults` (the user's settings) apply when the script has no frontmatter value, so one script's
+   * `speed` doesn't leak into the next.
+   */
+  loadScript(
+    file: ScriptFile,
+    keepPosition = false,
+    defaults?: { speedWpm: number; fontSizePx: number },
+  ): void {
     const script = parseScript(file.content, file.format);
     this.script.set(script);
     this.fileName.set(file.name);
@@ -73,8 +84,11 @@ export class PrompterStore {
     if (!keepPosition) {
       this.cursor.set(0);
       this.playing.set(false);
-      if (script.meta.speed) this.setSpeed(script.meta.speed);
-      if (script.meta.fontSize) this.fontSizePx.set(script.meta.fontSize);
+      const speed = script.meta.speed ?? defaults?.speedWpm;
+      const fontSize = script.meta.fontSize ?? defaults?.fontSizePx;
+      if (speed) this.setSpeed(speed);
+      if (fontSize)
+        this.fontSizePx.set(Math.max(MIN_FONT_PX, Math.min(MAX_FONT_PX, Math.round(fontSize))));
     } else {
       this.setCursor(this.cursor());
     }
