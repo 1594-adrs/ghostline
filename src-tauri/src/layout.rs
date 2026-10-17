@@ -6,28 +6,34 @@ fn px(v: f64) -> u32 {
     v.round().max(1.0) as u32
 }
 
+fn to_i32(v: i64) -> i32 {
+    v.clamp(i32::MIN as i64, i32::MAX as i64) as i32
+}
+
 /// `work` is the monitor work area (taskbar excluded); `scale` is the monitor DPI factor (min sizes and margin are logical px).
+/// Arithmetic is done in i64 so no input can overflow.
 pub fn default_rect(mode: OverlayMode, work: Rect, scale: f64) -> Rect {
     let (w, h) = (work.width as f64, work.height as f64);
+    let (x0, y0, ww) = (work.x as i64, work.y as i64, work.width as i64);
     match mode {
         OverlayMode::Corner => {
             let width = px((w * 0.34).max(420.0 * scale)).min(work.width);
             let height = px((h * 0.30).max(220.0 * scale)).min(work.height);
-            let margin = (24.0 * scale).round() as i32;
+            let margin = (24.0 * scale).round() as i64;
             Rect {
-                x: work.x + work.width as i32 - width as i32 - margin,
-                y: work.y + margin,
+                x: to_i32(x0 + ww - width as i64 - margin),
+                y: to_i32(y0 + margin),
                 width,
                 height,
             }
         }
         OverlayMode::Strip => {
-            let width = px(w * 0.60);
+            let width = px(w * 0.60).min(work.width);
             Rect {
-                x: work.x + (work.width - width) as i32 / 2,
+                x: to_i32(x0 + (ww - width as i64) / 2),
                 y: work.y,
                 width,
-                height: px(h * 0.18),
+                height: px(h * 0.18).min(work.height),
             }
         }
         OverlayMode::Full => work,
@@ -36,10 +42,11 @@ pub fn default_rect(mode: OverlayMode, work: Rect, scale: f64) -> Rect {
 
 /// True when the rect overlaps the area at all (guards saved bounds from a monitor that is gone).
 pub fn intersects(a: Rect, b: Rect) -> bool {
-    a.x < b.x + b.width as i32
-        && b.x < a.x + a.width as i32
-        && a.y < b.y + b.height as i32
-        && b.y < a.y + a.height as i32
+    let end = |p: i32, len: u32| p as i64 + len as i64;
+    (a.x as i64) < end(b.x, b.width)
+        && (b.x as i64) < end(a.x, a.width)
+        && (a.y as i64) < end(b.y, b.height)
+        && (b.y as i64) < end(a.y, a.height)
 }
 
 #[cfg(test)]

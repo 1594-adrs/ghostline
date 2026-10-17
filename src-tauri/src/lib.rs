@@ -88,13 +88,17 @@ async fn open_script_dialog(app: AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
-fn read_script(path: String) -> Result<ScriptFile, String> {
-    script::read(&path)
+async fn read_script(path: String) -> Result<ScriptFile, String> {
+    spawn_blocking(move || script::read(&path))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn watch_script(app: AppHandle, path: String) -> Result<(), String> {
-    script::watch(&app, &path)
+async fn watch_script(app: AppHandle, path: String) -> Result<(), String> {
+    spawn_blocking(move || script::watch(&app, &path))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

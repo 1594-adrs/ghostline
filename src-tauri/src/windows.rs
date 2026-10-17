@@ -75,8 +75,9 @@ pub fn apply_bounds(app: &AppHandle, w: &WebviewWindow, s: &Settings) {
     let Some(r) = rect else {
         return log::warn!("no monitor found, overlay bounds left unchanged");
     };
-    let _ = w.set_size(PhysicalSize::new(r.width, r.height));
+    // Position first: moving to a monitor with another DPI fires WM_DPICHANGED, which would rescale a size set earlier.
     let _ = w.set_position(PhysicalPosition::new(r.x, r.y));
+    let _ = w.set_size(PhysicalSize::new(r.width, r.height));
 }
 
 pub fn apply_capture(app: &AppHandle, hidden: bool) {

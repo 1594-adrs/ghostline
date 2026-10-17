@@ -9,12 +9,22 @@ use crate::{
     lock,
 };
 use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode};
-use std::{fs::File, io::Read, path::Path, time::Duration};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 use tauri::{AppHandle, Emitter, Manager};
 
 pub const MAX_BYTES: u64 = 2 * 1024 * 1024;
 
-pub fn read(path: &str) -> Result<ScriptFile, String> {
+/// Rejects UNC/device paths before any filesystem access (so Windows never starts SMB auth),
+/// checks the extension, then canonicalizes. Returns the canonical path and its format.
+fn validate(path: &str) -> Result<(PathBuf, ScriptFormat), String> {
+    if path.starts_with(r"\\") || path.starts_with("//") {
+        return Err("Network and device paths are not supported.".into());
+    }
     let p = Path::new(path);
     let ext = p
         .extension()
@@ -25,6 +35,19 @@ pub fn read(path: &str) -> Result<ScriptFile, String> {
         Some("txt") => ScriptFormat::Txt,
         _ => return Err("Only .md, .markdown and .txt scripts are supported.".into()),
     };
+    let canon = p
+        .canonicalize()
+        .map_err(|e| format!("Cannot open the script: {e}"))?;
+    // Local files canonicalize to `\\?\C:\...`; only `\\?\UNC\...` is a network share (e.g. a mapped drive).
+    if canon.to_string_lossy().starts_with(r"\\?\UNC\") || !canon.is_file() {
+        return Err("The script must be a regular file on a local drive.".into());
+    }
+    Ok((canon, format))
+}
+
+pub fn read(path: &str) -> Result<ScriptFile, String> {
+    let (p, format) = validate(path)?;
+    let p = p.as_path();
     let file = File::open(p).map_err(|e| format!("Cannot open the script: {e}"))?;
     // Read one byte past the limit so a file that grows after open() is still rejected.
     let mut bytes = Vec::new();
@@ -55,7 +78,7 @@ pub fn read(path: &str) -> Result<ScriptFile, String> {
 
 /// Watches the parent directory (editors replace files atomically) and filters by file name. Replaces any previous watch.
 pub fn watch(app: &AppHandle, path: &str) -> Result<(), String> {
-    let target = Path::new(path);
+    let (target, _) = validate(path)?;
     let dir = target
         .parent()
         .ok_or("The script path has no parent directory.")?
@@ -137,5 +160,29 @@ mod tests {
         let (_d, p) = write("bad.md", &[0xff, 0xfe, 0x41]);
         assert!(read(&p).unwrap_err().contains("UTF-8"));
         assert!(read("C:/definitely/missing.md").is_err());
+    }
+
+    #[test]
+    fn rejects_unc_device_paths_and_directories() {
+        for p in [
+            r"\\server\share\a.md",
+            "//server/share/a.md",
+            r"\\?\C:\a.md",
+            r"\\.\pipe\a.md",
+        ] {
+            assert!(read(p).unwrap_err().contains("Network"), "{p}");
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let sub = dir.path().join("d.md");
+        fs::create_dir(&sub).unwrap();
+        assert!(read(&sub.to_string_lossy()).is_err());
+    }
+
+    #[test]
+    fn accepts_local_file_whose_canonical_form_is_verbatim() {
+        let (_d, p) = write("v.md", b"hi");
+        let canon = Path::new(&p).canonicalize().unwrap();
+        assert!(canon.to_string_lossy().starts_with(r"\\?\"), "{canon:?}");
+        assert!(read(&p).is_ok());
     }
 }
